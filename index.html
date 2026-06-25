@@ -642,10 +642,10 @@
       const aiResponseMessages = document.getElementById('aiResponseMessages');
       const sendBtn = document.getElementById('sendBtn');
       const micBtn = document.getElementById('micBtn');
-      // Backend URL (automatically uses local backend on localhost, and your hosted backend in production)
+      // Backend URL (automatically uses local backend on localhost, and same-domain api in production)
       const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '')
         ? 'http://localhost:5000/api'
-        : 'https://nanco-chatbot-backend.onrender.com/api'; // TODO: Replace with your actual hosted backend URL (e.g. from Render or Railway)
+        : '/api';
 
       function appendMessage(text, isUser = false, isError = false) {
         if (!aiResponseMessages) return;
