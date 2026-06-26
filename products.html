@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nanco Paints | Interactive Product Catalog</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        body { 
+            background-color: var(--color-linen-canvas);
+            overflow: hidden; /* We will manage scroll inside main content */
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* --- BUCKET VISUALIZER CSS --- */
+        .bucket-container { position: relative; width: 140px; height: 160px; margin: 0 auto; }
+        .bucket-body { 
+            position: absolute; bottom: 0; width: 100%; height: 140px; background: linear-gradient(90deg, #e2e8f0 0%, #f8fafc 50%, #cbd5e1 100%); 
+            border-radius: 4px 4px 16px 16px; border: 1px solid rgba(0,0,0,0.1); overflow: hidden; box-shadow: inset -5px -5px 15px rgba(0,0,0,0.05);
+        }
+        .bucket-lid { 
+            position: absolute; top: 12px; left: -2%; width: 104%; height: 16px; background: #f1f5f9; 
+            border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); z-index: 10;
+        }
+        .bucket-handle {
+            position: absolute; top: -15px; left: 50%; transform: translateX(-50%); width: 142px; height: 43px;
+            border: 3px solid #cbd5e1; border-bottom: none; border-radius: 100px 100px 0 0; z-index: 1;
+        }
+        .bucket-label {
+            position: absolute; bottom: 15px; left: 0; width: 100%; height: 90px;
+            display: flex; flex-direction: column; justify-content: center; padding: 0 12px; color: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+        
+        /* --- LAYOUT --- */
+        .catalog-wrapper {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            margin-top: 80px; /* offset for nav-float */
+        }
+
+        /* Sidebar Filters */
+        .sidebar-filters {
+            width: 280px;
+            background: var(--color-white-plate);
+            border-right: 1px solid rgba(0,0,0,0.05);
+            padding: 32px 24px;
+            overflow-y: auto;
+            flex-shrink: 0;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.02);
+            z-index: 10;
+        }
+        
+        @media (max-width: 900px) {
+            .sidebar-filters { display: none; }
+        }
+
+        .filter-section {
+            margin-bottom: 32px;
+            border-top: 1px solid rgba(0,0,0,0.05);
+            padding-top: 24px;
+        }
+        .filter-section:first-child {
+            border-top: none;
+            padding-top: 0;
+        }
+        .filter-title {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--color-sage-mute);
+            margin-bottom: 16px;
+        }
+        
+        .filter-label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--color-ink-black);
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .filter-label:hover {
+            color: var(--color-cobalt-band);
+        }
+        .filter-checkbox {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 2px solid rgba(0,0,0,0.15);
+            outline: none;
+            cursor: pointer;
+            position: relative;
+            background: #fff;
+            transition: all 0.2s;
+        }
+        .filter-checkbox:checked {
+            background: var(--color-cobalt-band);
+            border-color: var(--color-cobalt-band);
+        }
+        .filter-checkbox:checked::after {
+            content: '\f00c';
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            color: #fff;
+            font-size: 10px;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Main Content Area */
+        .main-catalog {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* Sticky Top Bar */
+        .catalog-topbar {
+            position: sticky;
+            top: 0;
+            background: rgba(247, 246, 243, 0.9); /* linen-canvas */
+            backdrop-filter: blur(12px);
+            padding: 16px 32px;
+            z-index: 30;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .search-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+        }
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            padding-left: 44px;
+            border-radius: 99px;
+            border: 1px solid rgba(0,0,0,0.1);
+            background: var(--color-white-plate);
+            font-family: var(--font-primary);
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+        }
+        .search-input:focus {
+            border-color: var(--color-cobalt-band);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--color-sage-mute);
+        }
+
+        .view-toggles {
+            display: flex;
+            gap: 8px;
+        }
+        .view-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-buttons);
+            border: 1px solid rgba(0,0,0,0.1);
+            background: var(--color-white-plate);
+            color: var(--color-sage-mute);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .view-btn.active {
+            background: var(--color-cobalt-band);
+            color: #fff;
+            border-color: var(--color-cobalt-band);
+        }
+        .view-btn:not(.active):hover {
+            color: var(--color-cobalt-band);
+            background: rgba(0,0,0,0.02);
+        }
+
+        /* Product Container Adjustments */
+        .products-pad {
+            padding: 32px;
+        }
+        
+        /* Modals */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(11, 23, 44, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            background: var(--color-white-plate);
+            border-radius: var(--radius-cards);
+            width: 100%;
+            max-width: 900px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.15);
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 36px;
+            height: 36px;
+            background: var(--color-linen-canvas);
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-ink-black);
+            cursor: pointer;
+            z-index: 50;
+            transition: transform 0.2s;
+        }
+        .modal-close:hover {
+            transform: scale(1.1);
+            background: var(--color-cobalt-band);
+            color: #fff;
+        }
+
+        .pdp-grid {
+            display: flex;
+            flex: 1;
+            overflow-y: auto;
+        }
+        @media (max-width: 768px) {
+            .pdp-grid { flex-direction: column; }
+        }
+        
+        .pdp-visual {
+            width: 40%;
+            background: var(--color-linen-canvas);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            border-right: 1px solid rgba(0,0,0,0.05);
+        }
+        @media (max-width: 768px) {
+            .pdp-visual { width: 100%; border-right: none; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        }
+        
+        .pdp-details {
+            width: 60%;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+        }
+        @media (max-width: 768px) {
+            .pdp-details { width: 100%; }
+        }
+
+        .feature-badge {
+            background: rgba(0,0,0,0.04);
+            color: var(--color-ink-black);
+            font-size: 10px;
+            font-weight: 800;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(0,0,0,0.05);
+            white-space: nowrap;
+        }
+
+        /* Small layout adjustments for cards */
+        .product-card {
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            background: var(--color-white-plate);
+        }
+        .product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.08);
+        }
+        
+        .product-card.list-view {
+            flex-direction: row;
+            align-items: center;
+            gap: 24px;
+        }
+        .product-card.list-view .bucket-wrapper {
+            height: 120px;
+            width: 140px;
+            transform: scale(0.7);
+            margin-bottom: 0;
+            background: var(--color-linen-canvas);
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- FLOATING NAV -->
+    <nav class="nav-float" aria-label="Main navigation">
+        <div class="nav-inner">
+            <a class="nav-logo" href="index.html">
+                <img src="light-logo.png" alt="Nanco Paints">
+            </a>
+            <ul class="nav-links" role="list">
+                <li><a href="index.html" id="nav-home">Home</a></li>
+                <li><a href="products.html" id="nav-products" style="font-weight:800; color:var(--color-cobalt-band);">Products</a></li>
+                <li><a href="services.html" id="nav-services">Services</a></li>
+                <li><a href="calculators.html" id="nav-calculators">Calculators</a></li>
+                <li><a href="paint_visualizer.html" id="nav-visualizer">Visualizer</a></li>
+                <li><a href="about_us.html" id="nav-about">About Us</a></li>
+            </ul>
+            <div class="nav-right">
+                <a class="btn-primary" href="#" style="border:none; padding: 10px 20px;">Book Site Visit</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- CATALOG LAYOUT -->
+    <div class="catalog-wrapper">
+        
+        <!-- SIDEBAR FILTERS -->
+        <aside class="sidebar-filters">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                <h2 style="font-size:18px; font-weight:800; color:var(--color-ink-black);">Filters <i class="fas fa-filter" style="color:var(--color-cobalt-band); font-size:14px; margin-left:4px;"></i></h2>
+            </div>
+            
+            <!-- Category Filter -->
+            <div class="filter-section">
+                <h3 class="filter-title">Surface / Category</h3>
+                <label class="filter-label">
+                    <input type="checkbox" class="filter-checkbox filter-category" value="interior"> Interior Walls
+                </label>
+                <label class="filter-label">
+                    <input type="checkbox" class="filter-checkbox filter-category" value="exterior"> Exterior Facades
+                </label>
+                <label class="filter-label">
+                    <input type="checkbox" class="filter-checkbox filter-category" value="waterproofing"> Waterproofing
+                </label>
+                <label class="filter-label">
+                    <input type="checkbox" class="filter-checkbox filter-category" value="wood"> Wood & Metal
+                </label>
+            </div>
+
+            <!-- Finish Filter -->
+            <div class="filter-section">
+                <h3 class="filter-title">Finish</h3>
+                <label class="filter-label">
+                    <input type="checkbox" class="filter-checkbox filter-finish" value="matte"> Premium Matte
+                </label>
+                <label class="filter-label">
+                    <input type="checkbox" class="filter-checkbox filter-finish" value="satin"> Smooth Satin
+                </label>
+                <label class="filter-label">
+                    <input type="checkbox" class="filter-checkbox filter-finish" value="gloss"> High Gloss
+                </label>
+            </div>
+
+            <!-- Price Tier Filter -->
+            <div class="filter-section">
+                <h3 class="filter-title">Price Tier</h3>
+                <label class="filter-label">
+                    <input type="checkbox" class="filter-checkbox filter-price" value="standard"> Standard (₹150 - ₹300)
+                </label>
+                <label class="filter-label">
+                    <input type="checkbox" class="filter-checkbox filter-price" value="premium"> Premium (₹300 - ₹500)
+                </label>
+                <label class="filter-label">
+                    <input type="checkbox" class="filter-checkbox filter-price" value="luxury"> Luxury (₹500+)
+                </label>
+            </div>
+            
+            <button onclick="clearFilters()" class="btn-ghost" style="width: 100%; border-color: rgba(0,0,0,0.1); margin-top: 16px;">Clear All Filters</button>
+        </aside>
+
+        <!-- MAIN PRODUCT AREA -->
+        <main class="main-catalog">
+            
+            <!-- Sticky Search Topbar -->
+            <div class="catalog-topbar">
+                <div class="search-wrapper">
+                    <input type="text" id="search-input" placeholder="Search paints, features, or finishes..." class="search-input">
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <div class="view-toggles">
+                    <button onclick="setGridMode('grid')" id="btn-grid" class="view-btn active"><i class="fas fa-th-large"></i></button>
+                    <button onclick="setGridMode('list')" id="btn-list" class="view-btn"><i class="fas fa-list"></i></button>
+                </div>
+            </div>
+
+            <!-- Products Grid -->
+            <div class="products-pad">
+                <div id="product-count" style="font-size:12px; font-weight:700; color:var(--color-sage-mute); margin-bottom: 20px;">Showing all products...</div>
+                
+                <div id="product-grid" class="bento-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+                    <!-- Products dynamically injected via JS -->
+                </div>
+
+                <!-- Banner: Download Catalog -->
+                <div class="bento-card card-cobalt" style="margin-top: 40px; display: flex; justify-content: space-between; align-items: center; padding: 40px; flex-wrap: wrap; gap: 24px;">
+                    <div>
+                        <span class="section-label" style="background: var(--color-lime-spark); color: var(--color-ink-black); border:none;">Free Resources</span>
+                        <h2 class="bento-card-title" style="color: #fff; font-size: 28px; margin-top: 16px;">Download the 2026 Inspiration Lookbook</h2>
+                        <p class="bento-card-desc" style="color: rgba(255,255,255,0.7); max-width: 500px;">Get access to 50+ pages of curated colors, interior trends, and expert tips.</p>
+                    </div>
+                    <button onclick="openLeadModal()" class="btn-primary" style="background: var(--color-lime-spark); color: var(--color-ink-black); border:none; padding: 16px 28px; font-size: 16px;">
+                        <i class="fas fa-file-pdf" style="margin-right:8px;"></i> Unlock PDF Catalog
+                    </button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODALS -->
+    <!-- ========================================== -->
+
+    <!-- Product Detail Modal (PDP) -->
+    <div id="pdp-modal" class="modal-backdrop">
+        <div class="modal-content" id="pdp-content">
+            <button onclick="closeModal('pdp-modal')" class="modal-close"><i class="fas fa-times"></i></button>
+            
+            <div class="pdp-grid">
+                <!-- Left Visual -->
+                <div class="pdp-visual">
+                    <div id="pdp-bucket-container" style="transform: scale(1.4);"></div>
+                </div>
+                
+                <!-- Right Details -->
+                <div class="pdp-details">
+                    <div id="pdp-badges" style="display:flex; gap:8px; margin-bottom: 12px; flex-wrap: wrap;"></div>
+                    <h2 id="pdp-name" style="font-size: 28px; font-weight: 800; color: var(--color-ink-black); margin-bottom: 8px;">Product Name</h2>
+                    
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom: 20px;">
+                        <div style="color: #eab308; font-size: 12px;">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
+                        </div>
+                        <span style="font-size: 12px; font-weight: 700; color: var(--color-cobalt-band); text-decoration: underline; cursor: pointer;">128 Verified Reviews</span>
+                    </div>
+
+                    <p id="pdp-desc" style="font-size: 14px; color: var(--color-sage-mute); line-height: 1.6; margin-bottom: 32px;">High-performance luxury emulsion providing a smooth finish. Perfect for high-traffic areas.</p>
+
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px;">
+                        <div style="background: var(--color-linen-canvas); padding: 16px; border-radius: var(--radius-smallelements); border: 1px solid rgba(0,0,0,0.05); text-align: center;">
+                            <i class="fas fa-tint" style="color: var(--color-cobalt-band); font-size: 18px; margin-bottom: 8px;"></i>
+                            <div id="pdp-finish" style="font-size: 12px; font-weight: 800; text-transform: uppercase;">Matte</div>
+                            <div style="font-size: 10px; color: var(--color-sage-mute); font-weight: 700;">FINISH</div>
+                        </div>
+                        <div style="background: var(--color-linen-canvas); padding: 16px; border-radius: var(--radius-smallelements); border: 1px solid rgba(0,0,0,0.05); text-align: center;">
+                            <i class="fas fa-tag" style="color: #16a34a; font-size: 18px; margin-bottom: 8px;"></i>
+                            <div id="pdp-price" style="font-size: 12px; font-weight: 800; text-transform: uppercase;">Premium</div>
+                            <div style="font-size: 10px; color: var(--color-sage-mute); font-weight: 700;">CATEGORY</div>
+                        </div>
+                        <div style="background: var(--color-linen-canvas); padding: 16px; border-radius: var(--radius-smallelements); border: 1px solid rgba(0,0,0,0.05); text-align: center;">
+                            <i class="fas fa-shield-alt" style="color: #9333ea; font-size: 18px; margin-bottom: 8px;"></i>
+                            <div style="font-size: 12px; font-weight: 800; text-transform: uppercase;">6 Years</div>
+                            <div style="font-size: 10px; color: var(--color-sage-mute); font-weight: 700;">WARRANTY</div>
+                        </div>
+                    </div>
+
+                    <!-- Coverage Estimator -->
+                    <div style="background: var(--color-linen-canvas); padding: 24px; border-radius: var(--radius-cards); border: 1px solid rgba(0,0,0,0.05); margin-top: auto;">
+                        <h4 style="font-size: 14px; font-weight: 800; color: var(--color-ink-black); margin-bottom: 4px; display:flex; align-items:center; gap:8px;">
+                            <i class="fas fa-calculator" style="color: var(--color-cobalt-band);"></i> Quick Coverage Estimator
+                        </h4>
+                        <p style="font-size: 12px; color: var(--color-sage-mute); margin-bottom: 16px;">Enter your wall size to estimate paint requirement.</p>
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <input type="number" id="est-sqft" placeholder="Total Sq.Ft" style="width: 100px; padding: 10px 14px; border-radius: var(--radius-inputs); border: 1px solid rgba(0,0,0,0.1); font-family: var(--font-primary); font-size: 14px; outline:none;">
+                            <button onclick="calculateCoverage()" class="btn-primary" style="padding: 10px 16px; font-size: 12px;">Calculate</button>
+                            <div style="margin-left: auto; text-align: right;">
+                                <span style="font-size: 10px; font-weight: 800; color: var(--color-sage-mute); text-transform: uppercase; display:block;">You need:</span>
+                                <span id="est-result" style="font-size: 20px; font-weight: 800; color: var(--color-ink-black);">-- L</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bottom Actions -->
+            <div style="background: var(--color-white-plate); padding: 20px 40px; border-top: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <span style="font-size: 12px; color: var(--color-sage-mute); font-weight: 700; display:block;">Starting from</span>
+                    <span id="pdp-price-val" style="font-size: 24px; font-weight: 800; color: var(--color-ink-black);">₹450<span style="font-size: 14px; font-weight: 400; color: var(--color-sage-mute);"> / Liter</span></span>
+                </div>
+                <div style="display:flex; gap: 12px;">
+                    <button class="btn-ghost" style="border-color: rgba(0,0,0,0.15);">View Shades</button>
+                    <button class="btn-primary" style="background: var(--color-ink-black); border-color: var(--color-ink-black); color: #fff;">Buy Now</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gated Content Lead Modal -->
+    <div id="lead-modal" class="modal-backdrop">
+        <div class="modal-content" id="lead-content" style="max-width: 440px; border-radius: var(--radius-cards);">
+            <div style="background: var(--color-cobalt-deep); padding: 32px 24px; text-align: center; position: relative;">
+                <button onclick="closeModal('lead-modal')" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.1); border:none; color:#fff; width:30px; height:30px; border-radius:50%; cursor:pointer;"><i class="fas fa-times"></i></button>
+                <div style="width: 60px; height: 60px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 24px; color: var(--color-lime-spark);">
+                    <i class="fas fa-unlock-alt"></i>
+                </div>
+                <h3 style="font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 6px;">Unlock Inspiration</h3>
+                <p style="font-size: 13px; color: rgba(255,255,255,0.7);">Enter your details to instantly download the 2026 Lookbook.</p>
+            </div>
+            <div style="padding: 32px 24px;">
+                <form id="lead-form" style="display:flex; flex-direction:column; gap:16px;">
+                    <div>
+                        <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--color-sage-mute); margin-bottom:6px; display:block;">Full Name</label>
+                        <input type="text" required style="width: 100%; padding: 12px 16px; border-radius: var(--radius-inputs); border: 1px solid rgba(0,0,0,0.1); background: var(--color-linen-canvas); outline:none; font-family:var(--font-primary); font-size: 14px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--color-sage-mute); margin-bottom:6px; display:block;">WhatsApp Number</label>
+                        <input type="tel" required style="width: 100%; padding: 12px 16px; border-radius: var(--radius-inputs); border: 1px solid rgba(0,0,0,0.1); background: var(--color-linen-canvas); outline:none; font-family:var(--font-primary); font-size: 14px;">
+                    </div>
+                    <button type="submit" class="btn-primary" style="width: 100%; padding: 14px; font-size: 14px; margin-top: 8px;">Download PDF Now</button>
+                    <p style="font-size: 10px; text-align: center; color: var(--color-sage-mute); margin-top: 8px;">By downloading, you agree to receive home interior tips via WhatsApp.</p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logic Script -->
+    <script>
+        // --- 1. MOCK DATABASE ---
+        const products = [
+            { id: 1, name: "Nanco ALL PROTEK", category: "interior", finish: "satin", price: "luxury", priceVal: 650, features: ["Flame Retardant", "Lotus Effect", "Stain Repellent"], color: "#1e3a8a", label: "Interior Luxury", desc: "Advanced Lotus Effect Technology ensures walls remain stain-free and water-repellent." },
+            { id: 2, name: "Nanco WeatherShield", category: "exterior", finish: "matte", price: "premium", priceVal: 400, features: ["Anti-Fungal", "UV Protect", "10 Yr Warranty"], color: "#ea580c", label: "Exterior Shield", desc: "Tough exterior emulsion designed to withstand extreme sunlight and heavy monsoons." },
+            { id: 3, name: "Nanco BaseCoat Primer", category: "interior", finish: "matte", price: "standard", priceVal: 220, features: ["Quick Dry", "High Opacity"], color: "#475569", label: "Undercoat", desc: "Perfect foundational layer ensuring top-coats adhere better and colors pop brighter." },
+            { id: 4, name: "Nanco AquaStop Roof", category: "waterproofing", finish: "matte", price: "premium", priceVal: 450, features: ["Waterproof", "Crack Seal", "Cool Roof"], color: "#0d9488", label: "Waterproofing", desc: "Heavy-duty elastomeric coating that seals cracks up to 2mm and cools building interiors." },
+            { id: 5, name: "Nanco Royale Silk", category: "interior", finish: "gloss", price: "luxury", priceVal: 750, features: ["Teflon Surface", "Low VOC", "Odorless"], color: "#be185d", label: "Interior Silk", desc: "The ultimate luxury finish. Gives walls a rich, smooth, and highly washable glossy sheen." },
+            { id: 6, name: "Nanco WoodCare PRO", category: "wood", finish: "gloss", price: "standard", priceVal: 300, features: ["Termite Proof", "Clear Finish"], color: "#b45309", label: "Wood Finish", desc: "Transparent polyurethane coat that protects wooden furniture while enhancing natural grain." },
+            { id: 7, name: "Nanco EcoMatte", category: "interior", finish: "matte", price: "standard", priceVal: 180, features: ["Zero VOC", "Budget Friendly"], color: "#65a30d", label: "Eco Interior", desc: "A great standard choice for fast renovations with zero toxic emissions." },
+            { id: 8, name: "Nanco Metallic Rust", category: "wood", finish: "satin", price: "luxury", priceVal: 800, features: ["Texture", "Anti-Rust"], color: "#9f1239", label: "Metal/Texture", desc: "Create a modern, industrial rusted-metal look on any surface with this specialty paint." }
+        ];
+
+        // --- 2. CSS BUCKET GENERATOR ---
+        function generateBucketHTML(product) {
+            return `
+                <div class="bucket-container">
+                    <div class="bucket-handle"></div>
+                    <div class="bucket-lid"></div>
+                    <div class="bucket-body">
+                        <div class="bucket-label" style="background-color: ${product.color};">
+                            <span style="font-size:9px; font-weight:800; text-transform:uppercase; opacity:0.8; letter-spacing:0.1em;">Nanco</span>
+                            <span style="font-size:14px; font-weight:800; line-height:1.1; margin-top:2px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${product.name}</span>
+                            <div style="margin-top:6px; display:flex; gap:4px; flex-wrap:wrap;">
+                                <span style="font-size:8px; background:#fff; color:var(--color-ink-black); padding:2px 6px; border-radius:4px; font-weight:800; text-transform:uppercase; box-shadow:0 2px 4px rgba(0,0,0,0.1);">${product.label}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- 3. RENDERING & FILTERING LOGIC ---
+        let currentView = 'grid'; // 'grid' or 'list'
+
+        function renderProducts() {
+            const grid = document.getElementById('product-grid');
+            const searchQ = document.getElementById('search-input').value.toLowerCase();
+            
+            const checkedCategories = Array.from(document.querySelectorAll('.filter-category:checked')).map(cb => cb.value);
+            const checkedFinishes = Array.from(document.querySelectorAll('.filter-finish:checked')).map(cb => cb.value);
+            const checkedPrices = Array.from(document.querySelectorAll('.filter-price:checked')).map(cb => cb.value);
+
+            const filtered = products.filter(p => {
+                const matchesSearch = p.name.toLowerCase().includes(searchQ) || p.features.join(' ').toLowerCase().includes(searchQ);
+                const matchesCat = checkedCategories.length === 0 || checkedCategories.includes(p.category);
+                const matchesFin = checkedFinishes.length === 0 || checkedFinishes.includes(p.finish);
+                const matchesPrice = checkedPrices.length === 0 || checkedPrices.includes(p.price);
+                return matchesSearch && matchesCat && matchesFin && matchesPrice;
+            });
+
+            document.getElementById('product-count').innerText = `Showing ${filtered.length} product${filtered.length !== 1 ? 's' : ''}`;
+
+            if(currentView === 'grid') {
+                grid.className = 'bento-grid';
+                grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
+            } else {
+                grid.className = 'bento-grid';
+                grid.style.gridTemplateColumns = '1fr';
+            }
+
+            grid.innerHTML = filtered.map(p => {
+                const featuresHtml = p.features.map(f => `<span class="feature-badge"><i class="fas fa-check" style="color:var(--color-cobalt-band); margin-right:4px;"></i>${f}</span>`).join('');
+                
+                if(currentView === 'grid') {
+                    return `
+                        <div class="bento-card product-card" onclick="openPDP(${p.id})">
+                            <div class="bucket-wrapper" style="height: 220px; display:flex; align-items:center; justify-content:center; background: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url('pattern.jpg'); background-color: ${p.color}; background-blend-mode: multiply; background-size: cover; background-position: center; border-radius: var(--radius-smallelements); margin-bottom: 20px; position:relative;">
+                                ${generateBucketHTML(p)}
+                            </div>
+                            <h3 style="font-size: 18px; font-weight: 800; color: var(--color-ink-black); margin-bottom: 8px;">${p.name}</h3>
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; height: 44px; overflow:hidden;">${featuresHtml}</div>
+                            
+                            <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 16px;">
+                                <div>
+                                    <span style="font-size:10px; color:var(--color-sage-mute); text-transform:uppercase; font-weight:800; display:block; margin-bottom:2px;">${p.finish} finish</span>
+                                    <span style="font-size: 18px; font-weight:800; color:var(--color-ink-black);">₹${p.priceVal}<span style="font-size:12px; font-weight:400; color:var(--color-sage-mute);">/L</span></span>
+                                </div>
+                                <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--color-linen-canvas); display: flex; align-items: center; justify-content: center; color: var(--color-ink-black);"><i class="fas fa-arrow-right" style="transform: rotate(-45deg);"></i></div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="bento-card product-card list-view" onclick="openPDP(${p.id})">
+                            <div class="bucket-wrapper" style="display:flex; align-items:center; justify-content:center;">
+                                ${generateBucketHTML(p)}
+                            </div>
+                            <div style="flex:1; min-width:0;">
+                                <h3 style="font-size: 20px; font-weight: 800; color: var(--color-ink-black); margin-bottom: 6px;">${p.name}</h3>
+                                <p style="font-size: 13px; color: var(--color-sage-mute); margin-bottom: 12px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${p.desc}</p>
+                                <div style="display: flex; gap: 6px; flex-wrap: wrap;">${featuresHtml}</div>
+                            </div>
+                            <div style="text-align:right; border-left: 1px solid rgba(0,0,0,0.05); padding-left: 24px;">
+                                <span style="font-size: 24px; font-weight:800; color:var(--color-ink-black); display:block;">₹${p.priceVal}</span>
+                                <span style="font-size:10px; color:var(--color-sage-mute); text-transform:uppercase; font-weight:800;">Per Liter</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            }).join('') || '<div style="grid-column: 1 / -1; padding: 60px 20px; text-align: center; color: var(--color-sage-mute);"><i class="fas fa-box-open" style="font-size: 48px; opacity: 0.2; margin-bottom: 16px;"></i><p style="font-weight:700;">No products match your filters.</p></div>';
+        }
+
+        function setGridMode(mode) {
+            currentView = mode;
+            document.getElementById('btn-grid').className = mode === 'grid' ? 'view-btn active' : 'view-btn';
+            document.getElementById('btn-list').className = mode === 'list' ? 'view-btn active' : 'view-btn';
+            renderProducts();
+        }
+
+        // Listeners
+        document.getElementById('search-input').addEventListener('input', renderProducts);
+        document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', renderProducts));
+
+        function clearFilters() {
+            document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+            document.getElementById('search-input').value = '';
+            renderProducts();
+        }
+
+        // --- 4. MODALS ---
+        let currentPdpProduct = null;
+
+        function openPDP(id) {
+            currentPdpProduct = products.find(p => p.id === id);
+            if(!currentPdpProduct) return;
+            
+            document.getElementById('pdp-bucket-container').innerHTML = generateBucketHTML(currentPdpProduct);
+            document.getElementById('pdp-name').innerText = currentPdpProduct.name;
+            document.getElementById('pdp-desc').innerText = currentPdpProduct.desc;
+            document.getElementById('pdp-finish').innerText = currentPdpProduct.finish;
+            document.getElementById('pdp-price').innerText = currentPdpProduct.price;
+            document.getElementById('pdp-price-val').innerHTML = `₹${currentPdpProduct.priceVal}<span style="font-size: 14px; font-weight: 400; color: var(--color-sage-mute);"> / Liter</span>`;
+            
+            document.getElementById('pdp-badges').innerHTML = currentPdpProduct.features.map(f => `<span class="feature-badge">${f}</span>`).join('');
+            
+            document.getElementById('est-sqft').value = '';
+            document.getElementById('est-result').innerText = '-- L';
+
+            const modal = document.getElementById('pdp-modal');
+            const content = document.getElementById('pdp-content');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.style.opacity = '1';
+                content.style.transform = 'scale(1)';
+            }, 10);
+        }
+
+        function calculateCoverage() {
+            const sqft = parseFloat(document.getElementById('est-sqft').value);
+            if(!sqft || sqft <= 0) return;
+            const liters = (sqft / 80).toFixed(1);
+            document.getElementById('est-result').innerText = `${liters} L`;
+        }
+
+        function openLeadModal() { 
+            const modal = document.getElementById('lead-modal');
+            const content = document.getElementById('lead-content');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.style.opacity = '1';
+                content.style.transform = 'scale(1)';
+            }, 10);
+        }
+        
+        function closeModal(id) { 
+            const modal = document.getElementById(id);
+            const content = modal.querySelector('.modal-content');
+            modal.style.opacity = '0';
+            content.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+
+        document.getElementById('lead-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            this.innerHTML = `
+                <div style="text-align: center; padding: 40px 0;">
+                    <div style="width: 64px; height: 64px; background: #dcfce7; color: #16a34a; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 32px;">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <h3 style="font-size: 20px; font-weight: 800; color: var(--color-ink-black); margin-bottom: 8px;">Unlocked!</h3>
+                    <p style="font-size: 14px; color: var(--color-sage-mute);">Your download has started. Our expert will text you soon.</p>
+                </div>`;
+            setTimeout(() => closeModal('lead-modal'), 3000);
+        });
+
+        // Initialize
+        renderProducts();
+    </script>
+</body>
+</html>
